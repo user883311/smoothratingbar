@@ -1,11 +1,12 @@
-library smooth_star_rating;
+// Inspired from https://github.com/thangmam/smoothratingbar original
+// smooth_star_rating @ https://pub.dartlang.org/packages/smooth_star_rating
 
-import 'package:flutter/material.dart';
+library smooth_star_rating;
 import 'package:flutter/material.dart';
 
 typedef void RatingChangeCallback(double rating);
 
-class SmoothStarRating extends StatelessWidget {
+class SmoothStarRating extends StatefulWidget {
   final int starCount;
   final double rating;
   final RatingChangeCallback onRatingChanged;
@@ -23,26 +24,34 @@ class SmoothStarRating extends StatelessWidget {
       this.size,
       this.allowHalfRating = true});
 
+  @override
+  SmoothStarRatingState createState() => new SmoothStarRatingState();
+}
+
+class SmoothStarRatingState extends State<SmoothStarRating> {
+  double selectedStars, tempRating, ratingToApply; // 3 new vars
+
   Widget buildStar(BuildContext context, int index) {
     Icon icon;
-    if (index >= rating) {
+
+    if (index >= ratingToApply) {
       icon = new Icon(
         Icons.star_border,
-        color: borderColor ?? Theme.of(context).primaryColor,
-        size: size ?? 25.0,
+        color: widget.borderColor ?? Theme.of(context).primaryColor,
+        size: widget.size ?? 25.0,
       );
-    } else if (index > rating - (allowHalfRating ? 0.5 : 1.0) &&
-        index < rating) {
+    } else if (index > ratingToApply - (widget.allowHalfRating ? 0.5 : 1.0) &&
+        index < ratingToApply) {
       icon = new Icon(
         Icons.star_half,
-        color: color ?? Theme.of(context).primaryColor,
-        size: size ?? 25.0,
+        color: widget.color ?? Theme.of(context).primaryColor,
+        size: widget.size ?? 25.0,
       );
     } else {
       icon = new Icon(
         Icons.star,
-        color: color ?? Theme.of(context).primaryColor,
-        size: size ?? 25.0,
+        color: widget.color ?? Theme.of(context).primaryColor,
+        size: widget.size ?? 25.0,
       );
     }
 
@@ -50,15 +59,29 @@ class SmoothStarRating extends StatelessWidget {
       onHorizontalDragUpdate: (dragDetails) {
         RenderBox box = context.findRenderObject();
         var _pos = box.globalToLocal(dragDetails.globalPosition);
-        var i = _pos.dx / size;
-        var newRating = allowHalfRating ? i : i.round().toDouble();
-        if (newRating > starCount) {
-          newRating = starCount.toDouble();
+        var i = _pos.dx / widget.size;
+        tempRating = widget.allowHalfRating ? i : i.round().toDouble();
+        if (tempRating != selectedStars) {
+          setState(() {});
         }
-        if (newRating < 0) {
-          newRating = 0.0;
+        if (tempRating > widget.starCount) {
+          tempRating = widget.starCount.toDouble();
         }
-        if (this.onRatingChanged != null) onRatingChanged(newRating);
+        if (tempRating < 0) {
+          tempRating = 0.0;
+        }
+        // if (this.onRatingChanged != null) onRatingChanged(tempRating);
+      },
+      // new
+      onHorizontalDragEnd: (dragDetails) {
+        selectedStars = tempRating; // new
+        if (this.widget.onRatingChanged != null && selectedStars != null)
+          widget.onRatingChanged(selectedStars);
+      },
+      onTap: () {
+        selectedStars = double.parse((index + 1).toString());
+        if (this.widget.onRatingChanged != null && selectedStars != null)
+          widget.onRatingChanged(selectedStars);
       },
       child: icon,
     );
@@ -66,12 +89,16 @@ class SmoothStarRating extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    selectedStars = widget.rating ?? 0.0;
+    ratingToApply = tempRating ?? selectedStars;
+
     return new Material(
       color: Colors.transparent,
       child: new Wrap(
           alignment: WrapAlignment.start,
           children: new List.generate(
-              starCount, (index) => buildStar(context, index))),
+              widget.starCount, (index) => buildStar(context, index))),
     );
   }
 }
+
